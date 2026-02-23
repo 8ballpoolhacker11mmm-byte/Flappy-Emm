@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flappy EM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a0a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', monospace;
+            overflow: hidden;
+        }
+        h1 {
+            color: #ffe066;
+            font-size: 1.4rem;
+            letter-spacing: 4px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 16px #ffb300, 0 2px 0 #b37800;
+        }
+        #gameCanvas {
+            display: block;
+            border: 4px solid #ffe066;
+            box-shadow: 0 0 32px #ffb30088, 0 0 80px #3a0ca322;
+            image-rendering: pixelated;
+        }
+        p {
+            color: #a0c4ff;
+            font-size: 0.5rem;
+            margin-top: 10px;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>✦ FLAPPY EM ✦</h1>
+    <canvas id="gameCanvas" width="320" height="480"></canvas>
+    <p>SPACE / CLICK / TAP TO JUMP</p>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+
+
+        // Philippines Time (UTC+8) - Determine Day or Night
+        const phHour = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Manila"})).getHours();
+        const isNight = phHour >= 18 || phHour < 6; // Night: 6PM - 6AM
+
+        // Face image (user's photo as bird sprite)
+        const faceImg = new Image();
+        faceImg.src = 'data:image/png;base64,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';
+
+        // Game Constants
+        const GRAVITY_SLOW = 0.15;   // gravity before score 25
+        const GRAVITY_FAST = 0.15;   // gravity after score 25
+        const JUMP = -4.8;
+        const PIPE_SPEED_SLOW = 1.4; // pipe speed before score 25
+        const PIPE_SPEED_FAST = 1.4; // pipe speed after score 25
+        const PIPE_GAP = 175;
+        const PIPE_WIDTH = 44;
+
+        // Dynamic values (updated each frame)
+        let currentGravity = GRAVITY_SLOW;
+        let currentPipeSpeed = PIPE_SPEED_SLOW;
+
+        // Speed-up flash effect
+        let speedUpFlash = 0;
+
+        // Medal thresholds
+        const MEDALS = [
+            { score: 100, label: "DIAMOND", colors: ["#a8f0ff", "#00cfff", "#7fffff"], glow: "#00eeff" },
+            { score: 75,  label: "GOLD",    colors: ["#ffe066", "#ffd700", "#ff9500"], glow: "#ffd700" },
+            { score: 50,  label: "SILVER",  colors: ["#e0e0e0", "#ffffff", "#aaaaaa"], glow: "#cccccc" },
+            { score: 20,  label: "BRONZE",  colors: ["#e8a96b", "#d4845a", "#a05030"], glow: "#cd7f32" },
+        ];
+
+        function getMedal(s) {
+            return MEDALS.find(m => s >= m.score) || null;
+        }
+
+        // Parallax layers: [far, mid, near] - colors differ day vs night
+        const dayLayerColors   = ["#f0c060", "#d4944a", "#a0623a"];
+        const nightLayerColors = ["#1a2a6a", "#0f1a4a", "#0a1030"];
+        const layers = [
+            { color: isNight ? nightLayerColors[0] : dayLayerColors[0], speed: 0.3, rects: generateLayer(0.3, 6, 20, 40, 380, 480) },
+            { color: isNight ? nightLayerColors[1] : dayLayerColors[1], speed: 0.8, rects: generateLayer(0.8, 5, 30, 60, 330, 480) },
+            { color: isNight ? nightLayerColors[2] : dayLayerColors[2], speed: 1.4, rects: generateLayer(1.4, 7, 15, 35, 360, 480) },
+        ];
+
+        function generateLayer(speed, count, minH, maxH, yBase, ch) {
+            // Generate random rect positions for each layer (for city skyline effect)
+            let rects = [];
+            for (let i = 0; i < count; i++) {
+                rects.push({
+                    x: (canvas.width / count) * i + Math.random() * 20,
+                    w: 20 + Math.random() * 40,
+                    h: minH + Math.random() * (maxH - minH),
+                });
+            }
+            return rects;
+        }
+
+        let layerOffsets = [0, 0, 0];
+
+        // Stars
+        const stars = Array.from({length: 30}, () => ({
+            x: Math.random() * 320,
+            y: Math.random() * 200,
+            r: Math.random() * 1.5 + 0.3,
+            twinkle: Math.random() * Math.PI * 2
+        }));
+
+        // Ground
+        const GROUND_H = 40;
+        const GROUND_Y = canvas.height - GROUND_H;
+
+        let bird, pipes, score, frame, gameOver, started;
+        let bestScore = parseInt(localStorage.getItem('flappyEM_bestScore')) || 0;
+
+        function initGame() {
+            bird = { x: 55, y: 200, w: 52, h: 52, velocity: 0, angle: 0, flapFrame: 0 };
+            pipes = [];
+            score = 0;
+            frame = 0;
+            gameOver = false;
+            started = false;
+            currentGravity = GRAVITY_SLOW;
+            currentPipeSpeed = PIPE_SPEED_SLOW;
+            speedUpFlash = 0;
+        }
+
+        initGame();
+
+        // ---- Drawing helpers ----
+
+        function drawStars() {
+            stars.forEach(s => {
+                s.twinkle += 0.03;
+                let alpha = 0.5 + 0.5 * Math.sin(s.twinkle);
+                ctx.fillStyle = `rgba(255,255,220,${alpha})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawParallax() {
+            // Background city/mountain layers
+            layers.forEach((layer, i) => {
+                if (!gameOver && started) layerOffsets[i] -= layer.speed;
+                if (layerOffsets[i] <= -canvas.width) layerOffsets[i] = 0;
+
+                ctx.fillStyle = layer.color;
+                // Draw buildings/mountains
+                layer.rects.forEach(r => {
+                    let x1 = (r.x + layerOffsets[i]) % canvas.width;
+                    let x2 = x1 - canvas.width;
+                    ctx.fillRect(x1, GROUND_Y - r.h, r.w, r.h);
+                    ctx.fillRect(x2, GROUND_Y - r.h, r.w, r.h);
+                });
+            });
+        }
+
+        function drawGround() {
+            if (isNight) {
+                ctx.fillStyle = "#1a2a1a";
+                ctx.fillRect(0, GROUND_Y, canvas.width, GROUND_H);
+                ctx.fillStyle = "#1e3a1e";
+                ctx.fillRect(0, GROUND_Y, canvas.width, 6);
+                ctx.fillStyle = "#5a4a20";
+                ctx.fillRect(0, GROUND_Y + 14, canvas.width, 7);
+                ctx.fillStyle = "#4a3a18";
+                ctx.fillRect(0, GROUND_Y + 22, canvas.width, 4);
+            } else {
+                ctx.fillStyle = "#4a8f3f";
+                ctx.fillRect(0, GROUND_Y, canvas.width, GROUND_H);
+                ctx.fillStyle = "#5cb85c";
+                ctx.fillRect(0, GROUND_Y, canvas.width, 6);
+                ctx.fillStyle = "#c8a850";
+                ctx.fillRect(0, GROUND_Y + 14, canvas.width, 7);
+                ctx.fillStyle = "#b8983a";
+                ctx.fillRect(0, GROUND_Y + 22, canvas.width, 4);
+            }
+        }
+
+        function drawPipes() {
+            pipes.forEach(p => {
+                let grad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_WIDTH, 0);
+                grad.addColorStop(0, "#2d8a1e");
+                grad.addColorStop(0.35, "#5dc43b");
+                grad.addColorStop(0.65, "#83e05a");
+                grad.addColorStop(1, "#2d8a1e");
+                ctx.fillStyle = grad;
+
+                // Top pipe body
+                ctx.fillRect(p.x, 0, PIPE_WIDTH, p.top - 14);
+
+                // Top pipe cap (wider)
+                ctx.fillStyle = "#2d8a1e";
+                ctx.fillRect(p.x - 5, p.top - 14, PIPE_WIDTH + 10, 14);
+                let capGrad = ctx.createLinearGradient(p.x - 5, 0, p.x + PIPE_WIDTH + 5, 0);
+                capGrad.addColorStop(0, "#1e6010");
+                capGrad.addColorStop(0.3, "#5dc43b");
+                capGrad.addColorStop(0.7, "#83e05a");
+                capGrad.addColorStop(1, "#1e6010");
+                ctx.fillStyle = capGrad;
+                ctx.fillRect(p.x - 5, p.top - 14, PIPE_WIDTH + 10, 14);
+
+                // Bottom pipe cap
+                let bottomTop = GROUND_Y - p.bottom;
+                ctx.fillStyle = capGrad;
+                ctx.fillRect(p.x - 5, bottomTop, PIPE_WIDTH + 10, 14);
+
+                // Bottom pipe body
+                ctx.fillStyle = grad;
+                ctx.fillRect(p.x, bottomTop + 14, PIPE_WIDTH, p.bottom - 14);
+
+                // Shine on both pipes
+                ctx.fillStyle = "rgba(255,255,255,0.12)";
+                ctx.fillRect(p.x + 5, 0, 6, p.top - 14);
+                ctx.fillRect(p.x + 5, bottomTop + 14, 6, p.bottom - 14);
+            });
+        }
+
+        function drawBird() {
+            ctx.save();
+            ctx.translate(bird.x + bird.w / 2, bird.y + bird.h / 2);
+            // Tilt with velocity
+            let tilt = Math.min(Math.max(bird.velocity * 3.5, -25), 70);
+            ctx.rotate((tilt * Math.PI) / 180);
+
+            let size = 26; // radius of face circle
+
+            if (faceImg.complete && faceImg.naturalWidth > 0) {
+                // Clip to circle
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(faceImg, -size, -size, size * 2, size * 2);
+                ctx.restore();
+
+                // Circle border with glow
+                ctx.strokeStyle = "#ffe066";
+                ctx.lineWidth = 3;
+                ctx.shadowColor = "#ffb300";
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            } else {
+                // Fallback yellow bird
+                ctx.fillStyle = "#ffe44d";
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function drawHUD() {
+            // Score
+            ctx.fillStyle = "white";
+            ctx.font = "16px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText(score, canvas.width / 2, 40);
+
+            // Best
+            ctx.font = "7px 'Press Start 2P'";
+            ctx.fillStyle = "#ffe066";
+            ctx.fillText(`BEST: ${bestScore}`, canvas.width / 2, 58);
+
+            // Day/Night badge - top left, bigger
+            ctx.save();
+            ctx.textAlign = "left";
+            ctx.font = "9px 'Press Start 2P'";
+            ctx.fillStyle = isNight ? "#aaccff" : "#ffdd44";
+            ctx.shadowColor = isNight ? "#4488ff" : "#ffaa00";
+            ctx.shadowBlur = 8;
+            ctx.fillText(isNight ? "🌙 NIGHT MODE" : "☀️ DAY MODE", 8, 20);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+
+            // Live medal progress hint (next medal)
+            const nextMedal = [...MEDALS].reverse().find(m => score < m.score);
+            if (nextMedal && started && !gameOver) {
+                ctx.font = "6px 'Press Start 2P'";
+                ctx.fillStyle = nextMedal.colors[0];
+                ctx.shadowColor = nextMedal.glow;
+                ctx.shadowBlur = 6;
+                ctx.fillText(`${nextMedal.label}: ${nextMedal.score}`, canvas.width / 2, 72);
+                ctx.shadowBlur = 0;
+            }
+
+
+
+            ctx.textAlign = "left";
+        }
+
+        function drawStartScreen() {
+            ctx.fillStyle = "rgba(0,0,0,0.45)";
+            ctx.fillRect(30, 150, 260, 130);
+            ctx.strokeStyle = "#ffe066";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(30, 150, 260, 130);
+
+            ctx.fillStyle = "#ffe066";
+            ctx.font = "13px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText("FLAPPY EM", canvas.width / 2, 185);
+
+            ctx.fillStyle = "white";
+            ctx.font = "7px 'Press Start 2P'";
+            ctx.fillText("PRESS SPACE / CLICK", canvas.width / 2, 220);
+            ctx.fillText("TO START", canvas.width / 2, 240);
+            ctx.textAlign = "left";
+        }
+
+        function drawMedalIcon(x, y, size, medal) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Glow
+            ctx.shadowColor = medal.glow;
+            ctx.shadowBlur = 16;
+
+            if (medal.label === "DIAMOND") {
+                // Diamond shape
+                let grad = ctx.createLinearGradient(-size, 0, size, size);
+                grad.addColorStop(0, medal.colors[0]);
+                grad.addColorStop(0.5, medal.colors[1]);
+                grad.addColorStop(1, medal.colors[2]);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(0, -size);
+                ctx.lineTo(size * 0.8, -size * 0.2);
+                ctx.lineTo(size * 0.8, size * 0.3);
+                ctx.lineTo(0, size);
+                ctx.lineTo(-size * 0.8, size * 0.3);
+                ctx.lineTo(-size * 0.8, -size * 0.2);
+                ctx.closePath();
+                ctx.fill();
+                // Facet lines
+                ctx.strokeStyle = "rgba(255,255,255,0.4)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, -size); ctx.lineTo(0, size);
+                ctx.moveTo(-size * 0.8, -size * 0.2); ctx.lineTo(size * 0.8, -size * 0.2);
+                ctx.stroke();
+            } else {
+                // Circle medal
+                let grad = ctx.createRadialGradient(-size * 0.3, -size * 0.3, size * 0.1, 0, 0, size);
+                grad.addColorStop(0, medal.colors[1]);
+                grad.addColorStop(0.5, medal.colors[0]);
+                grad.addColorStop(1, medal.colors[2]);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+                // Shine
+                ctx.fillStyle = "rgba(255,255,255,0.35)";
+                ctx.beginPath();
+                ctx.arc(-size * 0.25, -size * 0.3, size * 0.38, 0, Math.PI * 2);
+                ctx.fill();
+                // Rim
+                ctx.strokeStyle = medal.colors[2];
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Ribbon
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = medal.label === "DIAMOND" ? "#0066cc" :
+                            medal.label === "GOLD" ? "#cc4400" :
+                            medal.label === "SILVER" ? "#445566" : "#883300";
+            ctx.fillRect(-5, -size - 12, 10, 14);
+
+            ctx.restore();
+        }
+
+        function drawGameOver() {
+            let medal = getMedal(score);
+            let boxH = medal ? 230 : 170;
+            let boxY = 125;
+
+            ctx.fillStyle = "rgba(0,0,0,0.65)";
+            ctx.fillRect(25, boxY, 270, boxH);
+            ctx.strokeStyle = "#ff4444";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(25, boxY, 270, boxH);
+
+            ctx.fillStyle = "#ff4444";
+            ctx.font = "13px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, boxY + 35);
+
+            ctx.fillStyle = "white";
+            ctx.font = "8px 'Press Start 2P'";
+            ctx.fillText(`SCORE: ${score}`, canvas.width / 2, boxY + 65);
+
+            ctx.fillStyle = "#ffe066";
+            ctx.fillText(`BEST:  ${bestScore}`, canvas.width / 2, boxY + 85);
+
+            if (medal) {
+                // Medal icon
+                drawMedalIcon(canvas.width / 2, boxY + 145, 28, medal);
+
+                // Medal label
+                ctx.shadowColor = medal.glow;
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = medal.colors[0];
+                ctx.font = "9px 'Press Start 2P'";
+                ctx.textAlign = "center";
+                ctx.fillText(medal.label, canvas.width / 2, boxY + 193);
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = "#a0c4ff";
+                ctx.font = "6px 'Press Start 2P'";
+                ctx.fillText("CLICK TO PLAY AGAIN", canvas.width / 2, boxY + 218);
+            } else {
+                ctx.fillStyle = "#a0c4ff";
+                ctx.font = "7px 'Press Start 2P'";
+                ctx.fillText("CLICK TO PLAY AGAIN", canvas.width / 2, boxY + 115);
+            }
+
+            ctx.textAlign = "left";
+        }
+
+        function drawSpeedUpBanner() {
+            if (speedUpFlash <= 0) return;
+            let alpha = Math.min(speedUpFlash / 20, 1);
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = "rgba(255, 60, 0, 0.18)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = "#ff4400";
+            ctx.font = "10px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.shadowColor = "#ff4400";
+            ctx.shadowBlur = 14;
+            ctx.fillText("⚡ SPEED UP! ⚡", canvas.width / 2, canvas.height / 2 - 20);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        function drawSunOrMoon() {
+            if (isNight) {
+                // Moon
+                ctx.save();
+                ctx.shadowColor = "#ffffcc";
+                ctx.shadowBlur = 18;
+                ctx.fillStyle = "#fffde0";
+                ctx.beginPath();
+                ctx.arc(260, 55, 22, 0, Math.PI * 2);
+                ctx.fill();
+                // Crescent cutout
+                ctx.globalCompositeOperation = "destination-out";
+                ctx.beginPath();
+                ctx.arc(272, 48, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalCompositeOperation = "source-over";
+                ctx.restore();
+            } else {
+                // Sun
+                ctx.save();
+                let sunPulse = 0.85 + 0.15 * Math.sin(frame * 0.02);
+                ctx.shadowColor = "#ffdd00";
+                ctx.shadowBlur = 30 * sunPulse;
+                // Rays
+                ctx.strokeStyle = "rgba(255, 220, 50, 0.5)";
+                ctx.lineWidth = 2.5;
+                for (let i = 0; i < 8; i++) {
+                    let angle = (i / 8) * Math.PI * 2 + frame * 0.005;
+                    ctx.beginPath();
+                    ctx.moveTo(260 + Math.cos(angle) * 28, 55 + Math.sin(angle) * 28);
+                    ctx.lineTo(260 + Math.cos(angle) * 42, 55 + Math.sin(angle) * 42);
+                    ctx.stroke();
+                }
+                // Sun body
+                let sunGrad = ctx.createRadialGradient(257, 52, 2, 260, 55, 22);
+                sunGrad.addColorStop(0, "#fff7a0");
+                sunGrad.addColorStop(0.5, "#ffd700");
+                sunGrad.addColorStop(1, "#ff9900");
+                ctx.fillStyle = sunGrad;
+                ctx.beginPath();
+                ctx.arc(260, 55, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function draw() {
+            // Sky gradient - Day or Night
+            let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            if (isNight) {
+                sky.addColorStop(0, "#020818");
+                sky.addColorStop(0.5, "#0a1a3a");
+                sky.addColorStop(1, "#0f2a55");
+            } else {
+                sky.addColorStop(0, "#87ceeb");
+                sky.addColorStop(0.5, "#f0c060");
+                sky.addColorStop(1, "#f9a825");
+            }
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (isNight) drawStars();
+            drawSunOrMoon();
+            drawParallax();
+            drawGround();
+            drawPipes();
+            drawBird();
+            drawHUD();
+            drawSpeedUpBanner();
+
+            if (!started && !gameOver) drawStartScreen();
+            if (gameOver) drawGameOver();
+        }
+
+        function update() {
+            if (gameOver || !started) return;
+
+            // Speed-up at score 25
+            if (score >= 25) {
+                if (currentPipeSpeed !== PIPE_SPEED_FAST) {
+                    currentPipeSpeed = PIPE_SPEED_FAST;
+                    currentGravity = GRAVITY_FAST;
+                    speedUpFlash = 60; // frames to show flash
+                }
+            }
+            if (speedUpFlash > 0) speedUpFlash--;
+
+            bird.flapFrame++;
+            bird.velocity += currentGravity;
+            bird.y += bird.velocity;
+
+            // Generate Pipes
+            if (frame % 140 === 0) {
+                let top = 40 + Math.random() * (GROUND_Y - PIPE_GAP - 80);
+                let bottom = GROUND_Y - top - PIPE_GAP;
+                pipes.push({ x: canvas.width, top, bottom, scored: false });
+            }
+
+            pipes.forEach((p, i) => {
+                p.x -= currentPipeSpeed;
+
+                // Collision Detection
+                let bx = bird.x + 3, by = bird.y + 3, bw = bird.w - 6, bh = bird.h - 4;
+                if (bx < p.x + PIPE_WIDTH && bx + bw > p.x &&
+                    (by < p.top || by + bh > GROUND_Y - p.bottom)) {
+                    triggerGameOver();
+                }
+
+                // Scoring
+                if (!p.scored && p.x + PIPE_WIDTH < bird.x) {
+                    score++;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        localStorage.setItem('flappyEM_bestScore', bestScore);
+                    }
+                    p.scored = true;
+                }
+
+                if (p.x + PIPE_WIDTH < 0) pipes.splice(i, 1);
+            });
+
+            // Ground/ceiling collision
+            if (bird.y + bird.h > GROUND_Y) {
+                bird.y = GROUND_Y - bird.h;
+                triggerGameOver();
+            }
+            if (bird.y < 0) {
+                bird.y = 0;
+                bird.velocity = 0;
+            }
+
+            frame++;
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function jump() {
+            if (!started && !gameOver) {
+                started = true;
+                bird.velocity = JUMP;
+                return;
+            }
+            if (gameOver) {
+                initGame();
+                started = true;
+                bird.velocity = JUMP;
+            } else {
+                bird.velocity = JUMP;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); jump(); }
+        });
+        canvas.addEventListener('mousedown', jump);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+
+        // Set body background based on time
+        document.body.style.background = isNight ? '#050a1a' : '#1a7ab0';
+
+        loop();
+    </script>
+</body>
+</html>
